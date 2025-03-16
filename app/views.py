@@ -4,6 +4,7 @@ from flask import render_template, request, redirect, url_for, flash, session, a
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash
+from flask import send_from_directory
 from app.models import UserProfile
 from app.forms import LoginForm
 from app.forms import UploadForm
@@ -45,6 +46,28 @@ def upload():
     return render_template('upload.html',form=form)
 
 
+def get_uploaded_images():
+    rootdir = os.getcwd()
+    print(rootdir)
+    uploads = []
+    for subdir,dir, files in os.walk(os.path.join(rootdir,app.config['UPLOAD_FOLDER'])):
+        for file in files:
+            print(os.path.join(subdir, file))
+            uploads.append(file)
+    return uploads
+
+            
+@app.route('/uploads/<filename>')
+def get_image(filename):
+    return send_from_directory(os.path.join(os.getcwd(),app.config['UPLOAD_FOLDER']), filename)
+
+
+@app.route('/files')
+@login_required
+def files():
+    uploaded_files = get_uploaded_images()
+    return render_template('files.html', uploaded_files=uploaded_files)
+
 @app.route('/login', methods=['POST', 'GET'])
 def login():
     form = LoginForm()
@@ -66,6 +89,13 @@ def login():
         # Remember to flash a message to the user
         
     return render_template("login.html", form=form)
+
+@app.route('/logout')
+@login_required 
+def logout():
+    logout_user()  
+    flash('You have been logged out successfully.', 'success')  
+    return redirect(url_for('home'))  
 
 # user_loader callback. This callback is used to reload the user object from
 # the user ID stored in the session
